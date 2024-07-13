@@ -1,9 +1,7 @@
 from django.contrib import admin
 from django.urls import path
-
 from ninja import NinjaAPI
 
-from user.authentication import bearer_auth
 from user.exceptions import (
     NotAuthorizedException,
     UserNotFoundException,
@@ -24,14 +22,6 @@ def health_check_handler(request):
     서버 헬스 체크하는 API.
     """
     return {"ping": "pong"}
-
-
-@base_api.get("/auth-test", auth=bearer_auth)
-def auth_test(request):
-    return {
-        "token": request.auth,
-        "email": request.user.email,
-    }
 
 
 @base_api.exception_handler(NotAuthorizedException)

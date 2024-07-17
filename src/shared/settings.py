@@ -45,6 +45,7 @@ DJANGO_APPS = [
 
 SERVICE_APPS = [
     "user.apps.UserConfig",
+    "product.apps.ProductConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + SERVICE_APPS

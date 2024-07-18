@@ -21,7 +21,12 @@ jobs:
     - name: Create env file
       run: |
         touch .env
-        echo "${{ secrets.ENV_VARS }}" >> .env
+        echo "${{ secrets.DJANGO_SECRET_KEY }}" >> .env
+        echo "${{ secrets.DB_NAME }}" >> .env
+        echo "${{ secrets.DB_USER }}" >> .env
+        echo "${{ secrets.DB_PASSWORD }}" >> .env
+        echo "${{ secrets.DB_HOST }}" >> .env
+        echo "${{ secrets.DB_PORT }}" >> .env
 
     - name: Install dependencies
       run: |

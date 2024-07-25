@@ -1,9 +1,9 @@
 import time
+from typing import TypedDict, ClassVar
 
 from django.conf import settings
 from ninja.security import HttpBearer
 import jwt
-from typing import TypedDict, ClassVar
 
 from user.exceptions import (
     NotAuthorizedException,

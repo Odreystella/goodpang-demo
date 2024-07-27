@@ -32,6 +32,11 @@ class Product(models.Model):
             GinIndex(
                 fields=["search_vector"]
             ),  # search_vector를 기준으로 역인덱스 생성
+            GinIndex(
+                name="product_name_gin_index",
+                fields=["name"],
+                opclasses=["gin_bigm_ops"],
+            ),
         ]
 
 

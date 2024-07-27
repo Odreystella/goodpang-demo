@@ -1,6 +1,7 @@
 from typing import List
 
 from django.http import HttpRequest
+from django.contrib.postgres.search import SearchQuery
 from ninja import Router
 
 from product.models import Product, ProductStatus, Category
@@ -17,11 +18,17 @@ router = Router(tags=["Products"])
         200: ObjectResponse[ProductListResponse],
     },
 )
-def product_list_handler(request: HttpRequest, category_id: int | None = None):
+def product_list_handler(
+    request: HttpRequest, category_id: int | None = None, query: str | None = None
+):
     """
-    쿼리 파라미터인 category_id에 따라 상품 목록 조회 API
+    쿼리 파라미터인 category_id, query에 따라 상품 목록 조회 API
     """
-    if category_id:
+    if query:
+        products = Product.objects.filter(
+            search_vector=SearchQuery(query), status=ProductStatus.ACTIVE
+        )
+    elif category_id:
         category: Category | None = Category.objects.filter(id=category_id).first()
         if not category:
             products = []

@@ -2,6 +2,7 @@ import time
 from typing import TypedDict, ClassVar
 
 from django.conf import settings
+from django.http import HttpRequest
 from ninja.security import HttpBearer
 import jwt
 
@@ -89,6 +90,10 @@ class BearerAuth(HttpBearer):
 
         request.user = user
         return token
+
+
+class AuthRequest(HttpRequest):
+    user: ServiceUser
 
 
 bearer_auth = BearerAuth()

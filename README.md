@@ -23,9 +23,13 @@ Django를 이용해서 e-commerce를 구현하는 프로젝트입니다.
     - postgresql의 Full-text search 영문 데이터 구현 방법
         - SearchVectorField: 영문 데이터인 tags를 기준으로 형태소 분석한 결과를 저장하는 필드.
         - GinIndex: search_vector 필드를 기준으로 역인덱스 생성.
-        - SearchVector:
-        - SearchQuery: 
-        - tsvector_update_trigger: tags가 수정될 때, search_vector과 역인덱스를 수정하는 트리거.
+        - SearchVector: 텍스트를 토큰화하고 정규화하여 검색 가능한 형태로 변환.
+            - PostgreSQL의 to_tsvector 함수를 기반으로 동작
+            - 각 단어와 해당 단어의 위치를 나타내는 토큰들로 구성
+        - SearchQuery: 검색어를 데이터베이스가 SearchVector와 비교하는 검색 쿼리 객체로 변환.
+            - search_type 옵션을 줄 수 있음
+            - 검색어는 stemming algorithms(형태소 분석 알고리즘)을 거침
+        - tsvector_update_trigger: tags가 수정될 때, search_vector과 역인덱스를 수정하는 트리거. [참고](https://medium.com/@nandagopal05/django-full-text-search-with-postgresql-f063aaf34e35)
     - postgresql의 Full-text search 한글 데이터 구현 방법
         - PostgreSQL 익스텐션 `pg_bigm` 사용
             - Dockerfil에서 postgres15 이미지를 사용할 때 pg_bigm(2-gram) 같이 설치해줌

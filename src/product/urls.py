@@ -36,7 +36,7 @@ def product_list_handler(
     if query:
         products = Product.objects.filter(
             name__contains=query, status=ProductStatus.ACTIVE
-        )[:100]
+        )
     elif category_id:
         category: Category | None = Category.objects.filter(id=category_id).first()
         if not category:
@@ -55,7 +55,7 @@ def product_list_handler(
             "id", "name", "price"
         )
 
-    return 200, response(ProductListResponse(products=products))
+    return 200, response(ProductListResponse(products=products[:30]))
 
 
 @router.get(

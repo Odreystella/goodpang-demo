@@ -4,8 +4,15 @@ from django.http import HttpRequest
 from django.db import transaction
 from ninja import Router
 
-from product.models import Product, ProductStatus, Category, Order, OrderLine
-from product.request import OrderRequestBody
+from product.models import (
+    Product,
+    ProductStatus,
+    Category,
+    Order,
+    OrderLine,
+    OrderStatus,
+)
+from product.request import OrderRequestBody, OrderPaymentConfirmRequestBody
 from product.response import (
     ProductListResponse,
     CategoryListResponse,
@@ -13,8 +20,17 @@ from product.response import (
 )
 from product.exceptions import (
     OrderInvalidProductException,
+    OrderNotFoundException,
+    OrderPaymentConfirmFailedException,
 )
-from shared.response import ObjectResponse, response, error_response, ErrorResponse
+from product.service import payment_service
+from shared.response import (
+    ObjectResponse,
+    response,
+    error_response,
+    ErrorResponse,
+    OkResponse,
+)
 from user.authentication import bearer_auth, AuthRequest
 
 
@@ -126,3 +142,33 @@ def order_products_handler(request: AuthRequest, body: OrderRequestBody):
         OrderLine.objects.bulk_create(objs=order_lines_to_create)
 
     return 201, response({"id": order.id, "total_price": order.total_price})
+
+
+@router.post(
+    "/orders/{order_id}/confirm",
+    response={
+        200: ObjectResponse[OkResponse],
+        400: ObjectResponse[ErrorResponse],
+        404: ObjectResponse[ErrorResponse],
+    },
+    auth=bearer_auth,
+)
+def confirm_order_payment_handler(
+    request: AuthRequest, order_id: int, body: OrderPaymentConfirmRequestBody
+):
+    """
+    주문에 대한 결제 확인 API
+    """
+    if not (
+        order := Order.objects.filter(id=order_id, user=request.user).first()
+    ):  # := 할당 표현식, python 3.8이상부터
+        return 404, error_response(msg=OrderNotFoundException.message)
+
+    if not payment_service.confirm_payment(
+        payment_key=body.payment_key, amount=order.total_price
+    ):
+        return 400, error_response(msg=OrderPaymentConfirmFailedException.message)
+
+    order.status = OrderStatus.PAID
+    order.save()
+    return 200, response(OkResponse())

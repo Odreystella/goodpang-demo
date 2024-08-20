@@ -90,3 +90,4 @@ def test_confirm_order(api_client):
     assert Schema({"results": {"detail": "ok"}}).validate(response.json())
 
     assert Order.objects.get(id=order.id).status == OrderStatus.PAID
+    assert ServiceUser.objects.get(id=user.id).order_count == 1

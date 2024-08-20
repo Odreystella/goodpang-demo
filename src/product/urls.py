@@ -13,7 +13,7 @@ from product.models import (
     OrderLine,
     OrderStatus,
 )
-from product.request import OrderRequestBody, OrderPaymentConfirmRequestBody
+from product.request import OrderRequestBody
 from product.response import (
     ProductListResponse,
     CategoryListResponse,
@@ -22,10 +22,8 @@ from product.response import (
 from product.exceptions import (
     OrderInvalidProductException,
     OrderNotFoundException,
-    OrderPaymentConfirmFailedException,
     OrderAlreadyPaidException,
 )
-from product.service import payment_service
 from shared.response import (
     ObjectResponse,
     response,
@@ -34,6 +32,7 @@ from shared.response import (
     OkResponse,
 )
 from user.authentication import bearer_auth, AuthRequest
+from user.exceptions import UserPointsNotEnoughException
 from user.models import ServiceUser
 
 
@@ -153,24 +152,18 @@ def order_products_handler(request: AuthRequest, body: OrderRequestBody):
         200: ObjectResponse[OkResponse],
         400: ObjectResponse[ErrorResponse],
         404: ObjectResponse[ErrorResponse],
+        409: ObjectResponse[ErrorResponse],
     },
     auth=bearer_auth,
 )
-def confirm_order_payment_handler(
-    request: AuthRequest, order_id: int, body: OrderPaymentConfirmRequestBody
-):
+def confirm_order_payment_handler(request: AuthRequest, order_id: int):
     """
-    주문에 대한 결제 확인 API
+    주문에 대해 결제의 승인여부를 확인하고, 완료 시 상태값을 PENDING -> PAID 변경하는 API
     """
     if not (
         order := Order.objects.filter(id=order_id, user=request.user).first()
     ):  # := 할당 표현식, python 3.8이상부터
         return 404, error_response(msg=OrderNotFoundException.message)
-
-    if not payment_service.confirm_payment(
-        payment_key=body.payment_key, amount=order.total_price
-    ):
-        return 400, error_response(msg=OrderPaymentConfirmFailedException.message)
 
     with transaction.atomic():
         success: int = Order.objects.filter(
@@ -179,8 +172,15 @@ def confirm_order_payment_handler(
         if not success:
             return 400, error_response(msg=OrderAlreadyPaidException.message)
 
+        user = ServiceUser.objects.select_for_update().get(
+            id=request.user.id
+        )  # 비관적 락 획득
+        if user.points < order.total_price:
+            return 409, error_response(msg=UserPointsNotEnoughException.message)
+
         ServiceUser.objects.filter(id=request.user.id).update(
-            order_count=F("order_count") + 1
+            order_count=F("order_count") + 1,
+            points=F("points") - order.total_price,
         )  # Denormalized counter
         # 이메일 전송 등 추가 로직
 

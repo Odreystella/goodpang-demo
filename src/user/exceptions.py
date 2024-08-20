@@ -17,3 +17,7 @@ class JWTDecodeException(Exception):
 
 class JWTExpiredException(Exception):
     message = "Expired Token"
+
+
+class UserPointsNotEnoughException(Exception):
+    message = "User Points Not Enough"

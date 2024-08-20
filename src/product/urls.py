@@ -2,6 +2,7 @@ from typing import List, Dict
 
 from django.http import HttpRequest
 from django.db import transaction
+from django.db.models import F
 from ninja import Router
 
 from product.models import (
@@ -22,6 +23,7 @@ from product.exceptions import (
     OrderInvalidProductException,
     OrderNotFoundException,
     OrderPaymentConfirmFailedException,
+    OrderAlreadyPaidException,
 )
 from product.service import payment_service
 from shared.response import (
@@ -32,6 +34,7 @@ from shared.response import (
     OkResponse,
 )
 from user.authentication import bearer_auth, AuthRequest
+from user.models import ServiceUser
 
 
 router = Router(tags=["Products"])
@@ -169,6 +172,16 @@ def confirm_order_payment_handler(
     ):
         return 400, error_response(msg=OrderPaymentConfirmFailedException.message)
 
-    order.status = OrderStatus.PAID
-    order.save()
+    with transaction.atomic():
+        success: int = Order.objects.filter(
+            id=order_id, status=OrderStatus.PENDING
+        ).update(status=OrderStatus.PAID)  # Compare-and-Swap, 업데이트 한 rows 수 반환
+        if not success:
+            return 400, error_response(msg=OrderAlreadyPaidException.message)
+
+        ServiceUser.objects.filter(id=request.user.id).update(
+            order_count=F("order_count") + 1
+        )  # Denormalized counter
+        # 이메일 전송 등 추가 로직
+
     return 200, response(OkResponse())

@@ -32,7 +32,7 @@ from shared.response import (
     OkResponse,
 )
 from user.authentication import bearer_auth, AuthRequest
-from user.exceptions import UserPointsNotEnoughException
+from user.exceptions import UserPointsNotEnoughException, UserVersionConflictException
 from user.models import ServiceUser
 
 
@@ -172,16 +172,21 @@ def confirm_order_payment_handler(request: AuthRequest, order_id: int):
         if not success:
             return 400, error_response(msg=OrderAlreadyPaidException.message)
 
-        user = ServiceUser.objects.select_for_update().get(
-            id=request.user.id
-        )  # 비관적 락 획득
+        user = ServiceUser.objects.get(id=request.user.id)
         if user.points < order.total_price:
             return 409, error_response(msg=UserPointsNotEnoughException.message)
 
-        ServiceUser.objects.filter(id=request.user.id).update(
+        success: int = ServiceUser.objects.filter(
+            id=request.user.id,
+            version=user.version,
+        ).update(
             order_count=F("order_count") + 1,
             points=F("points") - order.total_price,
-        )  # Denormalized counter
-        # 이메일 전송 등 추가 로직
+            version=user.version + 1,
+        )  # version 필드를 사용한 낙관적 락 방법
+
+        if not success:
+            # Order의 상태 변경은 성공적인데, User version 변경에서 충돌이 난 경우 재시도 등 처리가 필요함
+            return 409, error_response(msg=UserVersionConflictException.message)
 
     return 200, response(OkResponse())

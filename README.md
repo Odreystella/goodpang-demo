@@ -58,3 +58,15 @@ Django를 이용해서 e-commerce를 구현하는 프로젝트입니다.
         - Event-driven Architecture
         - 데이터베이스 샤딩/파티셔닝
         - CDN
+
+- **동시성 제어 방법**
+    - 비관적 락(pessimistic locking)
+        - 데이터베이스에 락을 거는 방법
+        - 데드락이 발생할 수 있음
+        - django orm으로 `select_for_update()`을 사용하면 락이 걸림
+    - 낙관적 락(optimistic locking)
+        - 데이터베이스에 실제로 락을 걸지 않고, version 칼럼을 두어 데이터의 변경 상태를 관리하는 방법
+        - 락을 실제로 잡지 않기 때문에 비관적 락보다 동시성 처리가 뛰어나지만, 코드의 복잡도가 증가하고
+        - 충돌 발생시, 실패한 요청에 대한 재시도 처리가 필요함
+    - Unique 제약 응용(timestamp)
+        - timestamp로 사용자별로 order_code를 생성하여, 초당 주문이 한번씩만 생성 될 수 있게 함 

@@ -21,3 +21,7 @@ class JWTExpiredException(Exception):
 
 class UserPointsNotEnoughException(Exception):
     message = "User Points Not Enough"
+
+
+class UserVersionConflictException(Exception):
+    message = "User Version Conflict"
